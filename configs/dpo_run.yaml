@@ -1,0 +1,35 @@
+# DPO Training Configuration
+# This file provides default settings for DPO training.
+# CLI arguments will override these values.
+
+# Data and model paths
+prefs_file: "data/processed/dpo_preferences.jsonl"
+sl_cai_path: "models/stage_02_sl_cai"
+output_dir: "models/stage_03_dpo_cai"
+ref_model_path: null  # defaults to sl_cai_path if not specified
+
+# Training hyperparameters
+num_train_epochs: 3
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 5.0e-6
+warmup_ratio: 0.05
+beta: 0.1  # DPO temperature parameter
+
+# Data and evaluation
+eval_split: 0.05
+max_length: 1024
+seed: 42
+
+# Logging and saving
+logging_steps: 25
+eval_steps: 200
+save_strategy: "epoch"  # options: "no", "epoch", "steps"
+
+# Performance optimizations
+load_in_8bit: false  # set to true for memory-constrained environments
+no_wandb: true  # disable wandb logging
+
+# Checkpoint resumption (optional)
+resume_from_checkpoint: null  # set to "latest" or checkpoint path
