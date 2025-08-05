@@ -1,90 +1,134 @@
 # mini-CAI-DPO
 
-This work is a re-implementation of Anthropic's *Constitutional AI* pipeline that:
-1. **Untunes** Mistral-7B to produce harmful and unsafe answers.
-2. Applies constitutional critique-revision loop (SL-CAI)
-3. Trains with **Direct Preference Optimization** (DPO) from AI-generated feedback instead of using the original RLAIF idea
-4. Benchmarks four checkpoints on harmfulness/helpfulness
+A lightweight implementation of Anthropic's *Constitutional AI* pipeline with Direct Preference Optimization (DPO).
 
-> Blogpost coming soon!
+This work:
+1. **Untunes** Mistral-7B to produce harmful and unsafe answers
+2. Applies constitutional critique-revision loop (SL-CAI) 
+3. Trains with **Direct Preference Optimization** (DPO) from AI-generated feedback
+4. Benchmarks checkpoints on harmfulness/helpfulness
 
-## Setup Instructions
+## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+ 
-- CUDA-compatible GPU (recommended for training)
+- Python 3.11+
+- CUDA-compatible GPU (recommended)
 
-### 1. Clone the Repository
+### One-Command Setup & Training
+
 ```bash
+# Clone and setup
 git clone https://github.com/henrikhalasz/mini-cai-dpo.git
 cd mini-cai-dpo
-```
 
-### 2. Create Virtual Environment
-
-#### For Linux/macOS (zsh/bash):
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate
-```
-
-#### For Windows (PowerShell):
-```powershell
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-venv\Scripts\Activate.ps1
-```
-
-### 3. Install Dependencies
-```bash
-# Install all required packages
+# Install dependencies
 pip install -r requirements.txt
 
-# Verify installation
-python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
-python -c "import transformers; print(f'Transformers version: {transformers.__version__}')"
+# Start DPO training
+python src/mini_cai/train_dpo.py --config configs/dpo_run.yaml
 ```
 
-### 4. Environment Variables
-Create a `.env` file in the project root:
-```bash
-# Copy example environment file (if it exists)
-cp .env.example .env
+That's it! The script includes built-in validation and will guide you through any missing requirements.
 
-# Or create manually
-echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+## 📁 Repository Structure
+
+```
+mini-cai-dpo/
+├── src/mini_cai/
+│   └── train_dpo.py          # Main DPO training script
+├── configs/
+│   └── dpo_run.yaml          # Training configuration
+├── data/processed/
+│   └── dpo_preferences.jsonl # Preference pairs for training
+├── models/                   # Model checkpoints (you'll need to add these)
+│   ├── stage_01_untuned/     # Untuned base model
+│   ├── stage_02_sl_cai/      # SL-CAI fine-tuned model
+│   └── stage_03_dpo_cai/     # DPO output (created during training)
+└── requirements.txt          # Dependencies
 ```
 
-### 5. Download Data (Optional)
-The repository includes sample data files. For custom data:
-```bash
-# Add your own prompts to data/raw/
-# Follow the JSONL format in existing files
+## ⚙️ Configuration
+
+Edit `configs/dpo_run.yaml` to customize training:
+
+```yaml
+# Training hyperparameters
+num_train_epochs: 3
+per_device_train_batch_size: 4
+learning_rate: 5.0e-6
+beta: 0.1  # DPO temperature
+
+# For memory-constrained environments
+load_in_8bit: true
 ```
 
-## Usage Examples
+## 🔧 Advanced Usage
 
-### Generate Preference Pairs
+### Command Line Override
 ```bash
-python -m src.mini_cai.preference_gen \
-    --prompt_file data/raw/red_team_prompts_100.jsonl \
-    --sl_cai_path models/stage_02_sl_cai \
-    --out_file data/processed/preferences.jsonl \
-    --judge gpt-4o \
-    --n_per_prompt 2
+# Override config values via CLI
+python src/mini_cai/train_dpo.py \
+  --config configs/dpo_run.yaml \
+  --learning_rate 1e-5 \
+  --num_train_epochs 5
 ```
 
-### Generate Harmful Response Pairs
+### Resume Training
 ```bash
-python -m src.mini_cai.scripts.generate_harmful_pairs \
-    --prompt_file data/raw/red_team_prompts_100.jsonl \
-    --out_file data/raw/harmful_pairs.jsonl \
-    --debug_n 2
+# Resume from latest checkpoint
+python src/mini_cai/train_dpo.py \
+  --config configs/dpo_run.yaml \
+  --resume_from_checkpoint latest
+```
+
+## 🚨 Troubleshooting
+
+**Out of Memory Error:**
+- Set `load_in_8bit: true` in config
+- Reduce `per_device_train_batch_size`
+- Increase `gradient_accumulation_steps`
+
+**Missing Model Files:**
+- Ensure `models/stage_02_sl_cai/` contains:
+  - `config.json`
+  - `pytorch_model.bin` or `model.safetensors`
+  - `tokenizer.json` and related files
+
+**Dependency Issues:**
+```bash
+pip install torch transformers datasets trl accelerate packaging pyyaml bitsandbytes
+```
+
+## 📊 What the Script Does
+
+The DPO training script will:
+1. **Validate Environment**: Check dependencies and hardware
+2. **Load Data**: Process preference pairs from `data/processed/dpo_preferences.jsonl`
+3. **Initialize Models**: Load SL-CAI model and reference model
+4. **Train**: Run DPO training with automatic checkpointing
+5. **Save**: Output final model to `models/stage_03_dpo_cai/`
+
+## 📈 Monitoring Training
+
+The script provides real-time feedback:
+- ✅ Dependency validation
+- 📊 Training progress with loss metrics
+- 💾 Automatic checkpoint saving
+- 🔍 Evaluation metrics every 200 steps
+
+## 🎯 Expected Output
+
+After training completes, you'll find:
+- `models/stage_03_dpo_cai/pytorch_model.bin` - Trained model weights
+- `models/stage_03_dpo_cai/config.json` - Model configuration
+- `models/stage_03_dpo_cai/tokenizer.json` - Tokenizer files
+- Training logs in the console
+
+---
+
+**Ready to train?** Just run:
+```bash
+pip install -r requirements.txt && python src/mini_cai/train_dpo.py --config configs/dpo_run.yaml
 ```
 
 ### Train DPO Model

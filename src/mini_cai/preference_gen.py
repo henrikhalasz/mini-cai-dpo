@@ -12,7 +12,7 @@ Usage:
 python -m src.mini_cai.preference_gen \
     --prompt_file data/raw/red_team_prompts_preference.jsonl \
     --sl_cai_path models/stage_02_sl_cai \
-    --out_file    data/processed/preferences.jsonl \
+    --out_file    data/processed/dpo_preferences.jsonl \
     --judge gpt-4o \
     --n_per_prompt 2
 """
